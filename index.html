@@ -1,11 +1,12 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Watch Together</title>
-  <script src="https://w2g-backend.onrender.com/socket.io/socket.io.js"></script>
-  <script src="https://www.youtube.com/iframe_api"></script>
-  <style>
+<meta charset="utf-8"/>
+<title>Watch Together</title>
+
+
+<style>
     body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px; }
     #player { width: 640px; height: 390px; }
     #chat { border: 1px solid #ccc; width: 640px; height: 300px; display: flex; flex-direction: column; }
@@ -16,132 +17,129 @@
   </style>
 </head>
 <body>
-  <h2>Watch Together</h2>
+<h2>Watch Together</h2>
+<div class="controls">
+<input id="nicknameInput" placeholder="Enter your name"/>
+<input id="roomInput" placeholder="Enter Room ID"/>
+<button onclick="joinRoom()">Join</button>
+<span>Users: <span id="users">0</span></span>
+</div>
+<div class="controls">
+<input id="urlInput" placeholder="Paste YouTube URL"/>
+<button onclick="loadVideo()">Load</button>
+</div>
+<div id="player"></div>
+<div id="chat">
+<div id="messages"></div>
+<div id="input">
+<input id="chatInput" placeholder="Type..."/>
+<button onclick="sendMessage()">Send</button>
+</div>
+</div>
 
-  <div class="controls">
-    <input id="nicknameInput" placeholder="Enter your name" />
-    <input id="roomInput" placeholder="Enter Room ID" />
-    <button onclick="joinRoom()">Join</button>
-    <span>Users: <span id="users">0</span></span>
-  </div>
 
-  <div class="controls">
-    <input id="urlInput" placeholder="Paste YouTube URL" />
-    <button onclick="loadVideo()">Load</button>
-  </div>
+<script>
+  const socket = io("https://w2g-backend.onrender.com");
+  let player;
+  let roomId = "";
+  let nickname = "Guest" + Math.floor(Math.random() * 1000);
+  let syncing = false;
+  let playerReady = false;
+  let lastAction = 0;
 
-  <div id="player"></div>
-
-  <div id="chat">
-    <div id="messages"></div>
-    <div id="input">
-      <input id="chatInput" placeholder="Type..." />
-      <button onclick="sendMessage()">Send</button>
-    </div>
-  </div>
-
-  <script>
-    const socket = io("https://w2g-backend.onrender.com");
-    let player;
-    let roomId = "";
-    let nickname = "Guest" + Math.floor(Math.random() * 1000);
-    let syncing = false;
-    let playerReady = false;
-    let lastAction = 0;
-
-    function joinRoom() {
-      const nickInput = document.getElementById('nicknameInput').value;
-      if (nickInput) nickname = nickInput;
-      roomId = document.getElementById('roomInput').value.trim();
-      if (!roomId) {
-        alert("Please enter a room ID");
-        return;
-      }
-      socket.emit('join-room', roomId);
-      document.getElementById('roomInput').disabled = true;
-      document.getElementById('nicknameInput').disabled = true;
+  function joinRoom() {
+    const nickInput = document.getElementById('nicknameInput').value;
+    if (nickInput) nickname = nickInput;
+    roomId = document.getElementById('roomInput').value.trim();
+    if (!roomId) {
+      alert("Please enter a room ID");
+      return;
     }
+    socket.emit('join-room', roomId);
+    document.getElementById('roomInput').disabled = true;
+    document.getElementById('nicknameInput').disabled = true;
+  }
 
-    function sendMessage() {
-      const input = document.getElementById('chatInput');
-      const message = input.value;
-      if (message && roomId) {
-        socket.emit('chat-message', `[${nickname}]: ${message}`);
-        input.value = '';
-      }
+  function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value;
+    if (message && roomId) {
+      socket.emit('chat-message', `[${nickname}]: ${message}`);
+      input.value = '';
     }
+  }
 
-    socket.on('chat-message', msg => {
-      const msgBox = document.getElementById('messages');
-      msgBox.innerHTML += `<div>${msg}</div>`;
-      msgBox.scrollTop = msgBox.scrollHeight;
-    });
+  socket.on('chat-message', msg => {
+    const msgBox = document.getElementById('messages');
+    msgBox.innerHTML += `<div>${msg}</div>`;
+    msgBox.scrollTop = msgBox.scrollHeight;
+  });
 
-    socket.on('user-list', users => {
-      document.getElementById('users').textContent = users.length;
-    });
+  socket.on('user-list', users => {
+    document.getElementById('users').textContent = users.length;
+  });
 
-    socket.on('video-action', ({ type, time }) => {
-      if (!playerReady) return;
-      syncing = true;
-      setTimeout(() => {
-        if (type === 'play') player.playVideo();
-        if (type === 'pause') player.pauseVideo();
-        if (type === 'seek') player.seekTo(time, true);
-        syncing = false;
-      }, 300);
-    });
+  socket.on('video-action', ({ type, time }) => {
+    if (!playerReady) return;
+    syncing = true;
+    setTimeout(() => {
+      if (type === 'play') player.playVideo();
+      if (type === 'pause') player.pauseVideo();
+      if (type === 'seek') player.seekTo(time, true);
+      syncing = false;
+    }, 300);
+  });
 
-    socket.on('load-video', (videoId) => {
-      if (!playerReady) return;
+  socket.on('load-video', (videoId) => {
+    if (!playerReady) return;
+    player.loadVideoById(videoId);
+  });
+
+  function extractVideoId(url) {
+    const regExp = /^.*(?:youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[1].length === 11) ? match[1] : null;
+  }
+
+  function loadVideo() {
+    const url = document.getElementById('urlInput').value;
+    const videoId = extractVideoId(url);
+    if (videoId && roomId) {
       player.loadVideoById(videoId);
+      socket.emit('load-video', videoId);
+    }
+  }
+
+  function onYouTubeIframeAPIReady() {
+    player = new YT.Player('player', {
+      height: '390',
+      width: '640',
+      videoId: 'dQw4w9WgXcQ',
+      events: {
+        onReady: onPlayerReady,
+        onStateChange: onPlayerStateChange
+      }
     });
+  }
 
-    function extractVideoId(url) {
-      const regExp = /^.*(?:youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-      const match = url.match(regExp);
-      return (match && match[1].length == 11) ? match[1] : null;
+  function onPlayerReady() {
+    playerReady = true;
+    console.log("Player ready");
+  }
+
+  function onPlayerStateChange(event) {
+    if (syncing || !roomId) return;
+    const time = player.getCurrentTime();
+    const now = Date.now();
+    if (now - lastAction < 500) return;
+    lastAction = now;
+
+    if (event.data === YT.PlayerState.PLAYING) {
+      socket.emit('video-action', { type: 'play', time });
+    } else if (event.data === YT.PlayerState.PAUSED) {
+      socket.emit('video-action', { type: 'pause', time });
     }
-
-    function loadVideo() {
-      const url = document.getElementById('urlInput').value;
-      const videoId = extractVideoId(url);
-      if (videoId && roomId) {
-        player.loadVideoById(videoId);
-        socket.emit('load-video', videoId);
-      }
-    }
-
-    function onYouTubeIframeAPIReady() {
-      player = new YT.Player('player', {
-        height: '390',
-        width: '640',
-        videoId: 'dQw4w9WgXcQ',
-        events: {
-          onReady: onPlayerReady,
-          onStateChange: onPlayerStateChange
-        }
-      });
-    }
-
-    function onPlayerReady() {
-      playerReady = true;
-      console.log("Player ready");
-    }
-
-    function onPlayerStateChange(event) {
-      if (syncing || !roomId) return;
-      const time = player.getCurrentTime();
-      const now = Date.now();
-      if (now - lastAction < 500) return;
-      lastAction = now;
-
-      if (event.data === YT.PlayerState.PLAYING) {
-        socket.emit('video-action', { type: 'play', time });
-      } else if (event.data === YT.PlayerState.PAUSED) {
-        socket.emit('video-action', { type: 'pause', time });
-      }
-    }
-  </script>
+  }
+</script>
 </body>
 </html>
