@@ -72,8 +72,7 @@
       }
     }
 
-    let syncing = false;
-socket.on('video-action', ({ type, time }) => {
+    socket.on('video-action', ({ type, time }) => {
   syncing = true;
 
       if (type === 'play') player.playVideo();
@@ -102,7 +101,6 @@ socket.on('video-action', ({ type, time }) => {
     }
 
     let lastAction = 0;
-let syncing = false;
     function onPlayerStateChange(event) {
   if (syncing) {
     syncing = false;
