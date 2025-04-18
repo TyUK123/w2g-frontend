@@ -76,6 +76,12 @@
   if (!playerReady) return;
   syncing = true;
   setTimeout(() => {
+    if (type === 'play') player.playVideo();
+    if (type === 'pause') player.pauseVideo();
+    if (type === 'seek') player.seekTo(time, true);
+    syncing = false;
+  }, 300);
+});
   syncing = true;
 
       if (type === 'play') player.playVideo();
@@ -100,7 +106,6 @@
     }
 
     function onPlayerReady() {
-  playerReady = true;
       console.log('Player ready');
     }
 
