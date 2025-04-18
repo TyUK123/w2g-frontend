@@ -2,25 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>W2G Clone MVP</title>
+  <title>W2G Clone with URL Input</title>
   <script src="https://w2g-backend.onrender.com/socket.io/socket.io.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
   <style>
-    body { font-family: sans-serif; display: flex; gap: 20px; }
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; gap: 10px; }
     #player { width: 640px; height: 390px; }
-    #chat { border: 1px solid #ccc; width: 300px; height: 390px; display: flex; flex-direction: column; }
+    #chat { border: 1px solid #ccc; width: 640px; height: 300px; display: flex; flex-direction: column; }
     #messages { flex: 1; overflow-y: auto; padding: 10px; }
     #input { display: flex; }
     #input input { flex: 1; }
+    .controls { display: flex; gap: 10px; }
   </style>
 </head>
 <body>
-  <div>
-    <div id="player"></div>
+  <h2>Watch Together</h2>
+
+  <div class="controls">
     <input id="roomInput" placeholder="Enter Room ID" />
     <button onclick="joinRoom()">Join</button>
-    <div>Users: <span id="users"></span></div>
+    <span>Users: <span id="users">0</span></span>
   </div>
+
+  <div class="controls">
+    <input id="urlInput" placeholder="Paste YouTube URL" />
+    <button onclick="loadVideo()">Load</button>
+  </div>
+
+  <div id="player"></div>
 
   <div id="chat">
     <div id="messages"></div>
@@ -65,6 +74,10 @@
       if (type === 'seek') player.seekTo(time, true);
     });
 
+    socket.on('load-video', (videoId) => {
+      player.loadVideoById(videoId);
+    });
+
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('player', {
         height: '390',
@@ -92,6 +105,23 @@
         socket.emit('video-action', { type: 'play', time });
       } else if (event.data === YT.PlayerState.PAUSED) {
         socket.emit('video-action', { type: 'pause', time });
+      }
+    }
+
+    function extractVideoId(url) {
+      const regExp = /^.*(?:youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[1].length == 11) ? match[1] : null;
+    }
+
+    function loadVideo() {
+      const url = document.getElementById('urlInput').value;
+      const videoId = extractVideoId(url);
+      if (videoId) {
+        player.loadVideoById(videoId);
+        socket.emit('load-video', videoId);
+      } else {
+        alert("Invalid YouTube URL");
       }
     }
   </script>
