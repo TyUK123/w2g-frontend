@@ -2,10 +2,8 @@
 
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
+<script src="https://w2g-backend.onrender.com/socket.io/socket.io.js"></script><meta charset="utf-8"/>
 <title>Watch Together</title>
-
-
 <style>
     body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px; }
     #player { width: 640px; height: 390px; }
@@ -36,8 +34,6 @@
 <button onclick="sendMessage()">Send</button>
 </div>
 </div>
-
-
 <script>
   const socket = io("https://w2g-backend.onrender.com");
   let player;
