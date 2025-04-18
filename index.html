@@ -47,8 +47,8 @@
     let nickname = "Guest" + Math.floor(Math.random() * 1000);
 
     function joinRoom() {
-      const nickInputValue = document.getElementById('nicknameInput').value;
-      if (nickInputValue) nickname = nickInputValue;
+      const nameInput = document.getElementById('nicknameInput').value;
+      if (nameInput) nickname = nameInput;
       roomId = document.getElementById('roomInput').value;
       socket.emit('join-room', roomId);
     }
@@ -72,7 +72,10 @@
       }
     }
 
-    socket.on('video-action', ({ type, time }) => {
+    let syncing = false;
+socket.on('video-action', ({ type, time }) => {
+  syncing = true;
+
       if (type === 'play') player.playVideo();
       if (type === 'pause') player.pauseVideo();
       if (type === 'seek') player.seekTo(time, true);
@@ -99,7 +102,12 @@
     }
 
     let lastAction = 0;
+let syncing = false;
     function onPlayerStateChange(event) {
+  if (syncing) {
+    syncing = false;
+    return;
+  }
       const time = player.getCurrentTime();
       const now = Date.now();
       if (now - lastAction < 500) return;
