@@ -49,6 +49,17 @@
     function joinRoom() {
       const nameInput = document.getElementById('nicknameInput').value;
       if (nameInput) nickname = nameInput;
+      roomId = document.getElementById('roomInput').value.trim();
+      if (!roomId) {
+        alert("Please enter a room ID");
+        return;
+      }
+      socket.emit('join-room', roomId);
+      document.getElementById('roomInput').disabled = true;
+      document.getElementById('nicknameInput').disabled = true;
+    
+      const nameInput = document.getElementById('nicknameInput').value;
+      if (nameInput) nickname = nameInput;
       roomId = document.getElementById('roomInput').value;
       socket.emit('join-room', roomId);
     }
@@ -66,7 +77,7 @@
     function sendMessage() {
       const input = document.getElementById('chatInput');
       const message = input.value;
-      if (message) {
+      if (message && roomId) {
         socket.emit('chat-message', `[${nickname}]: ${message}`);
         input.value = '';
       }
@@ -121,7 +132,7 @@
     function loadVideo() {
       const url = document.getElementById('urlInput').value;
       const videoId = extractVideoId(url);
-      if (videoId) {
+      if (videoId && roomId) {
         player.loadVideoById(videoId);
         socket.emit('load-video', videoId);
       } else {
