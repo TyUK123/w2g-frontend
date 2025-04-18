@@ -73,6 +73,9 @@
     }
 
     socket.on('video-action', ({ type, time }) => {
+  if (!playerReady) return;
+  syncing = true;
+  setTimeout(() => {
   syncing = true;
 
       if (type === 'play') player.playVideo();
@@ -97,11 +100,13 @@
     }
 
     function onPlayerReady() {
+  playerReady = true;
       console.log('Player ready');
     }
 
     let lastAction = 0;
 let syncing = false;
+let playerReady = false;
     function onPlayerStateChange(event) {
   if (syncing) {
     syncing = false;
