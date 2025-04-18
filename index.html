@@ -46,6 +46,7 @@
   let syncing = false;
   let playerReady = false;
   let lastAction = 0;
+  let lastKnownTime = 0;
 
   function joinRoom() {
     const nickInput = document.getElementById('nicknameInput').value;
@@ -83,7 +84,10 @@
     if (!playerReady) return;
     syncing = true;
     setTimeout(() => {
-      if (type === 'play') player.playVideo();
+      if (type === 'play') {
+        player.seekTo(time, true);
+        player.playVideo();
+      }
       if (type === 'pause') player.pauseVideo();
       if (type === 'seek') player.seekTo(time, true);
       syncing = false;
@@ -124,7 +128,16 @@
 
   function onPlayerReady() {
     playerReady = true;
-    console.log("Player ready");
+    setInterval(() => {
+      if (!syncing && player && roomId) {
+        const current = player.getCurrentTime();
+        const diff = Math.abs(current - lastKnownTime);
+        if (diff > 1.5) {
+          lastKnownTime = current;
+          socket.emit('video-action', { type: 'seek', time: current });
+        }
+      }
+    }, 1000);
   }
 
   function onPlayerStateChange(event) {
