@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>W2G Clone with URL Input</title>
+  <title>W2G Clone with Nicknames</title>
   <script src="https://w2g-backend.onrender.com/socket.io/socket.io.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
   <style>
@@ -19,6 +19,7 @@
   <h2>Watch Together</h2>
 
   <div class="controls">
+    <input id="nicknameInput" placeholder="Enter your name" />
     <input id="roomInput" placeholder="Enter Room ID" />
     <button onclick="joinRoom()">Join</button>
     <span>Users: <span id="users">0</span></span>
@@ -43,8 +44,11 @@
     const socket = io("https://w2g-backend.onrender.com");
     let player;
     let roomId = "";
+    let nickname = "Guest" + Math.floor(Math.random() * 1000);
 
     function joinRoom() {
+      const nameInput = document.getElementById('nicknameInput').value;
+      if (nameInput) nickname = nameInput;
       roomId = document.getElementById('roomInput').value;
       socket.emit('join-room', roomId);
     }
@@ -63,7 +67,7 @@
       const input = document.getElementById('chatInput');
       const message = input.value;
       if (message) {
-        socket.emit('chat-message', message);
+        socket.emit('chat-message', `[${nickname}]: ${message}`);
         input.value = '';
       }
     }
