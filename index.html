@@ -99,10 +99,11 @@
       player.seekTo(time, true);
       setTimeout(() => {
         player.mute();
+        const before = player.getCurrentTime();
         player.playVideo();
         setTimeout(() => {
-          const state = player.getPlayerState();
-          if (state !== 1) {
+          const after = player.getCurrentTime();
+          if (Math.abs(after - before) < 0.5) {
             document.getElementById('resumeNotice').style.display = 'block';
           }
           syncing = false;
