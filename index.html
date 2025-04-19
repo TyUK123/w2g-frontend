@@ -85,7 +85,8 @@
     if (type === 'play') {
       player.seekTo(time, true);
       setTimeout(() => {
-        player.playVideo(); // delayed start
+        player.mute();         // mute before play to bypass autoplay block
+        player.playVideo();    // delayed start
         syncing = false;
       }, 500);
     } else if (type === 'pause') {
