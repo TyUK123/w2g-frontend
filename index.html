@@ -38,46 +38,7 @@
     let player, roomId = "", nickname = "", playerReady = false;
     let lastKnownTime = 0, syncing = false, lastAction = 0;
     let currentVideoId = "dQw4w9WgXcQ";
-
-    const socket = io("https://w2g-backend-sync.onrender.com");
-
-    function joinRoom() {
-      nickname = document.getElementById("nicknameInput").value || "Guest" + Math.floor(Math.random() * 1000);
-      roomId = document.getElementById("roomInput").value.trim();
-      if (!roomId) return alert("Enter a room ID");
-      socket.emit("join-room", roomId, nickname);
-      document.getElementById("roomInput").disabled = true;
-      document.getElementById("nicknameInput").disabled = true;
-    }
-
-    function sendMessage() {
-      const input = document.getElementById("chatInput");
-      const message = input.value;
-      if (message && roomId) {
-        socket.emit("chat-message", `[${nickname}]: ${message}`);
-        input.value = "";
-      }
-    }
-
-    socket.on("chat-message", msg => {
-      const box = document.getElementById("messages");
-      box.innerHTML += `<div>${msg}</div>`;
-      box.scrollTop = box.scrollHeight;
-    });
-
-    function extractVideoId(url) {
-      const match = url.match(/(?:youtu.be\/|v\/|embed\/|watch\?v=|\&v=)([\w-]{11})/);
-      return match ? match[1] : null;
-    }
-
-    function loadVideo() {
-      const url = document.getElementById("urlInput").value;
-      const id = extractVideoId(url);
-      if (id && player) {
-        currentVideoId = id;
-        player.loadVideoById(id);
-      }
-    }
+    let socket;
 
     function onYouTubeIframeAPIReady() {
       player = new YT.Player("player", {
@@ -90,6 +51,60 @@
         }
       });
     }
+
+    window.addEventListener("load", () => {
+      socket = io("https://w2g-backend-sync.onrender.com");
+
+      window.joinRoom = function() {
+        nickname = document.getElementById("nicknameInput").value || "Guest" + Math.floor(Math.random() * 1000);
+        roomId = document.getElementById("roomInput").value.trim();
+        if (!roomId) return alert("Enter a room ID");
+        socket.emit("join-room", roomId, nickname);
+        document.getElementById("roomInput").disabled = true;
+        document.getElementById("nicknameInput").disabled = true;
+      };
+
+      window.sendMessage = function() {
+        const input = document.getElementById("chatInput");
+        const message = input.value;
+        if (message && roomId) {
+          socket.emit("chat-message", `[${nickname}]: ${message}`);
+          input.value = "";
+        }
+      };
+
+      socket.on("chat-message", msg => {
+        const box = document.getElementById("messages");
+        box.innerHTML += `<div>${msg}</div>`;
+        box.scrollTop = box.scrollHeight;
+      });
+
+      function extractVideoId(url) {
+        const match = url.match(/(?:youtu.be\/|v\/|embed\/|watch\?v=|\&v=)([\w-]{11})/);
+        return match ? match[1] : null;
+      }
+
+      window.loadVideo = function() {
+        const url = document.getElementById("urlInput").value;
+        const id = extractVideoId(url);
+        if (id && player) {
+          currentVideoId = id;
+          player.loadVideoById(id);
+        }
+      };
+
+      socket.on("sync", ({ time, state }) => {
+        if (!playerReady || syncing) return;
+        const playerState = player.getPlayerState();
+        const current = player.getCurrentTime();
+        const drift = Math.abs(current - time);
+        syncing = true;
+        if (drift > 1.0) player.seekTo(time, true);
+        if (state === 1 && playerState !== 1) player.playVideo();
+        if (state === 2 && playerState !== 2) player.pauseVideo();
+        setTimeout(() => syncing = false, 500);
+      });
+    });
 
     function onPlayerReady() {
       playerReady = true;
@@ -109,18 +124,6 @@
       if (now - lastAction < 500) return;
       lastAction = now;
     }
-
-    socket.on("sync", ({ time, state }) => {
-      if (!playerReady || syncing) return;
-      const playerState = player.getPlayerState();
-      const current = player.getCurrentTime();
-      const drift = Math.abs(current - time);
-      syncing = true;
-      if (drift > 1.0) player.seekTo(time, true);
-      if (state === 1 && playerState !== 1) player.playVideo();
-      if (state === 2 && playerState !== 2) player.pauseVideo();
-      setTimeout(() => syncing = false, 500);
-    });
   </script>
 
   <script src="https://w2g-backend-sync.onrender.com/socket.io/socket.io.js"></script>
