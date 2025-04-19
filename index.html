@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 <html lang="en">
@@ -83,19 +82,19 @@
   socket.on('video-action', ({ type, time }) => {
     if (!playerReady) return;
     syncing = true;
-    setTimeout(() => {
-      if (type === 'play') {
-        player.seekTo(time, true);
-        player.playVideo(); // force play
-      }
-      if (type === 'pause') {
-        player.pauseVideo();
-      }
-      if (type === 'seek') {
-        player.seekTo(time, true);
-      }
+    if (type === 'play') {
+      player.seekTo(time, true);
+      setTimeout(() => {
+        player.playVideo(); // delayed start
+        syncing = false;
+      }, 500);
+    } else if (type === 'pause') {
+      player.pauseVideo();
       syncing = false;
-    }, 200);
+    } else if (type === 'seek') {
+      player.seekTo(time, true);
+      syncing = false;
+    }
   });
 
   socket.on('load-video', (videoId) => {
