@@ -93,21 +93,22 @@
   });
 
   socket.on('video-action', ({ type, time }) => {
-    if (!playerReady) return;
+    if (!playerReady && type !== 'play') return; // block seek/pause if not ready
     syncing = true;
+
     if (type === 'play') {
       recreatePlayerWithAutoplay(time);
     } else if (type === 'pause') {
-      player.pauseVideo();
+      if (typeof player.pauseVideo === "function") player.pauseVideo();
       syncing = false;
     } else if (type === 'seek') {
-      player.seekTo(time, true);
+      if (typeof player.seekTo === "function") player.seekTo(time, true);
       syncing = false;
     }
   });
 
   socket.on('load-video', (videoId) => {
-    if (!playerReady) return;
+    if (!playerReady || !player) return;
     player.loadVideoById(videoId);
   });
 
@@ -120,15 +121,18 @@
   function loadVideo() {
     const url = document.getElementById('urlInput').value;
     const videoId = extractVideoId(url);
-    if (videoId && roomId) {
+    if (videoId && roomId && player) {
       player.loadVideoById(videoId);
       socket.emit('load-video', videoId);
     }
   }
 
   function recreatePlayerWithAutoplay(time) {
-    const videoId = player.getVideoData().video_id;
-    player.destroy();
+    if (player && typeof player.destroy === "function") {
+      player.destroy();
+    }
+    playerReady = false;
+    const videoId = player?.getVideoData?.().video_id || "dQw4w9WgXcQ";
     player = new YT.Player('player', {
       height: '390',
       width: '640',
@@ -140,6 +144,7 @@
       },
       events: {
         onReady: () => {
+          playerReady = true;
           syncing = false;
         },
         onStateChange: onPlayerStateChange
@@ -163,7 +168,7 @@
   function onPlayerReady() {
     playerReady = true;
     setInterval(() => {
-      if (!syncing && player && roomId) {
+      if (!syncing && player && roomId && typeof player.getCurrentTime === "function") {
         const current = player.getCurrentTime();
         const diff = Math.abs(current - lastKnownTime);
         if (diff > 1.5) {
@@ -175,7 +180,7 @@
   }
 
   function onPlayerStateChange(event) {
-    if (syncing || !roomId) return;
+    if (syncing || !roomId || !playerReady) return;
     const time = player.getCurrentTime();
     const now = Date.now();
     if (now - lastAction < 500) return;
