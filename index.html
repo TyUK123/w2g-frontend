@@ -8,12 +8,24 @@
 <script src="https://www.youtube.com/iframe_api"></script>
 <style>
     body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px; }
-    #player { width: 640px; height: 390px; }
+    #player { width: 640px; height: 390px; position: relative; }
     #chat { border: 1px solid #ccc; width: 640px; height: 300px; display: flex; flex-direction: column; }
     #messages { flex: 1; overflow-y: auto; padding: 10px; }
     #input { display: flex; }
     #input input { flex: 1; }
     .controls { display: flex; gap: 10px; margin-bottom: 10px; }
+    #resumeNotice {
+      display: none;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      position: fixed;
+      bottom: 30px;
+      z-index: 9999;
+    }
   </style>
 </head>
 <body>
@@ -36,6 +48,7 @@
 <button onclick="sendMessage()">Send</button>
 </div>
 </div>
+<div id="resumeNotice" onclick="resumePlayback()">Click to resume playback</div>
 
 <script>
   const socket = io("https://w2g-backend.onrender.com");
@@ -85,9 +98,15 @@
     if (type === 'play') {
       player.seekTo(time, true);
       setTimeout(() => {
-        player.mute();         // mute before play to bypass autoplay block
-        player.playVideo();    // delayed start
-        syncing = false;
+        player.mute();
+        player.playVideo();
+        setTimeout(() => {
+          const state = player.getPlayerState();
+          if (state !== 1) {
+            document.getElementById('resumeNotice').style.display = 'block';
+          }
+          syncing = false;
+        }, 1000);
       }, 500);
     } else if (type === 'pause') {
       player.pauseVideo();
@@ -116,6 +135,11 @@
       player.loadVideoById(videoId);
       socket.emit('load-video', videoId);
     }
+  }
+
+  function resumePlayback() {
+    player.playVideo();
+    document.getElementById('resumeNotice').style.display = 'none';
   }
 
   function onYouTubeIframeAPIReady() {
